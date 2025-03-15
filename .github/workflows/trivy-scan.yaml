@@ -1,0 +1,50 @@
+name: Trivy Scan Reusable Workflow
+
+on:
+  workflow_call:
+    inputs:
+      ecr_repo_var:
+        required: true
+        type: string
+      image_tag:
+        required: true
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      AWS_REGION:
+        required: true
+
+jobs:
+  trivy-scan:
+    runs-on: self-hosted
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    - name: Ensure Docker is running
+      run: |
+        sudo dockerd &
+        sleep 5
+        docker version
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Debug Image Reference
+      run: |
+        echo "Image Reference: ${{ steps.login-ecr.outputs.registry }}/${{ inputs.ecr_repo_var }}:${{ inputs.image_tag }}"
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: "${{ steps.login-ecr.outputs.registry }}/${{ inputs.ecr_repo_var }}:${{ inputs.image_tag }}"
+        format: 'table'
+        severity: 'CRITICAL'

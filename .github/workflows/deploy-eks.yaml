@@ -1,0 +1,62 @@
+name: Deploy to EKS Reusable Workflow
+
+on:
+  workflow_call:
+    inputs:
+      ecr_repo_var:
+        required: true
+        type: string
+      image_tag:
+        required: true
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      AWS_REGION:
+        required: true 
+      EKS_CLUSTER_NAME:
+        required: true
+
+  
+jobs: 
+  deploy:
+    name: Install dependencies
+    runs-on: self-hosted
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+    - name: Install tools
+      run: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        chmod +x ./kubectl
+        sudo mv ./kubectl /usr/local/bin/kubectl
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip awscliv2.zip
+        sudo ./aws/install 2>&1 > /dev/null
+        curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}   
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+    - name: Update kube config
+      env:
+        EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }} 
+      run: | 
+        aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
+        kubectl config set-context --current --namespace=default
+    - name: Deploy to EKS
+      env:
+        IMAGE_TAG: ${{ inputs.image_tag }} # Get tag from build job
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }} # Get registry from build job
+      run: |
+        pwd
+        ls -la
+        helm upgrade --install policy-holder-app ./manifests/helm/ --set reactphp.image.tag=$IMAGE_TAG
