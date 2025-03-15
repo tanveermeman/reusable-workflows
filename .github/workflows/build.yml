@@ -2,27 +2,27 @@ name: Build Reusable Workflow
 
 on:
   workflow_call:
-    # secrets:
-    #   AWS_ACCESS_KEY_ID:
-    #     required: true
-    #   AWS_SECRET_ACCESS_KEY:
-    #     required: true
-    #   AWS_REGION:
-    #     required: true 
-    # inputs:
-    #   ecr_repo_var:
-    #     required: true
-    #     type: string
-    # outputs: 
-    #   ecr_registry:
-    #     description: "ECR Registry URL"
-    #     value: ${{ jobs.build-image.outputs.ecr_registry }}
-    #   image_tag:
-    #     description: "Image Tag"
-    #     value: ${{ jobs.build-image.outputs.image_tag }}
-    #   ecr_repo_var:
-    #     description: "ECR Repository Name"
-    #     value: ${{ jobs.build-image.outputs.ecr_repo_var }}
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      AWS_REGION:
+        required: true 
+    inputs:
+      ecr_repo_var:
+        required: true
+        type: string
+    outputs: 
+      ecr_registry:
+        description: "ECR Registry URL"
+        value: ${{ jobs.build-image.outputs.ecr_registry }}
+      image_tag:
+        description: "Image Tag"
+        value: ${{ jobs.build-image.outputs.image_tag }}
+      ecr_repo_var:
+        description: "ECR Repository Name"
+        value: ${{ jobs.build-image.outputs.ecr_repo_var }}
 
 jobs:
   build:
@@ -32,30 +32,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # - name: Set up JDK 21
-      #   uses: actions/setup-java@v3
-      #   with:
-      #     java-version: '21'
-      #     distribution: 'temurin'
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
 
-      # - name: Set up Maven
-      #   uses: stCarolas/setup-maven@v4
-      #   with:
-      #     maven-version: '3.8.6'
+      - name: Set up Maven
+        uses: stCarolas/setup-maven@v4
+        with:
+          maven-version: '3.8.6'
 
-      # - name: Build with Maven
-      #   run: mvn clean install
+      - name: Build with Maven
+        run: mvn clean install
 
-      # - name: List target directory
-      #   run: ls -l target/
+      - name: List target directory
+        run: ls -l target/
 
 
-      # - name: Upload Artifact to S3
-      #   env:
-      #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      #   run: |
-      #     aws s3 cp target/hello-world-1.0-SNAPSHOT.jar s3://springboot-task-artifacts/artifacts/hello-world-1.0-SNAPSHOT.jar
+      - name: Upload Artifact to S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          aws s3 cp target/hello-world-1.0-SNAPSHOT.jar s3://springboot-task-artifacts/artifacts/hello-world-1.0-SNAPSHOT.jar
 
     # outputs:
     #   ecr_registry: ${{ steps.login-ecr.outputs.registry }}
