@@ -24,7 +24,6 @@ on:
         description: "ECR Repository Name"
         value: ${{ jobs.build-image.outputs.ecr_repo_var }}
 
-
 jobs:
   dockerize:
     runs-on: ubuntu-latest
