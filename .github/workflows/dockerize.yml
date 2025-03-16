@@ -61,11 +61,11 @@ jobs:
           IMAGE_TAG: ${{ steps.commit.outputs.short }}  # Use short SHA for image tag
 
       - name: Build and Push Docker image
-        run: |
-          docker build -t springboot-app/springboot-cicd:latest .
-          docker tag springboot-app/springboot-cicd:latest 567790055067.dkr.ecr.us-east-1.amazonaws.com/nodejs-poc:latest
-          docker push 567790055067.dkr.ecr.us-east-1.amazonaws.com/nodejs-poc:latest
-
         # run: |
-        # docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f Dockerfile .
-        # docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        #   docker build -t springboot-app/springboot-cicd:latest .
+        #   docker tag springboot-app/springboot-cicd:latest 567790055067.dkr.ecr.us-east-1.amazonaws.com/nodejs-poc:latest
+        #   docker push 567790055067.dkr.ecr.us-east-1.amazonaws.com/nodejs-poc:latest
+
+        run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f Dockerfile .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
