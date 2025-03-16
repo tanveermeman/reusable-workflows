@@ -27,6 +27,10 @@ on:
 jobs:
   dockerize:
     runs-on: ubuntu-latest
+    outputs:
+      ecr_registry: ${{ steps.login-ecr.outputs.registry }}
+      image_tag: ${{ steps.commit.outputs.short }}
+      ecr_repo_var: ${{ inputs.ecr_repo_var }}
 
     steps:
       - name: Checkout code
