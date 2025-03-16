@@ -75,5 +75,5 @@ jobs:
         #   docker push 567790055067.dkr.ecr.us-east-1.amazonaws.com/nodejs-poc:latest
 
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f Dockerfile .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker build -t $ECR_REGISTRY/${{ inputs.ecr_repo_var }}:$IMAGE_TAG -f Dockerfile .
+          docker push $ECR_REGISTRY/${{ inputs.ecr_repo_var }}:$IMAGE_TAG
