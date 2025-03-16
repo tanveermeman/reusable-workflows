@@ -1,3 +1,93 @@
+# name: Dockerize and Push to ECR
+
+# on:
+#   workflow_call:
+#     secrets:
+#       AWS_ACCESS_KEY_ID:
+#         required: true
+#       AWS_SECRET_ACCESS_KEY:
+#         required: true
+#       AWS_REGION:
+#         required: true 
+#     inputs:
+#       ecr_repo_var:
+#         required: true
+#         type: string
+#     outputs: 
+#       ecr_registry:
+#         description: "ECR Registry URL"
+#         value: ${{ jobs.build-image.outputs.ecr_registry }}
+#       image_tag:
+#         description: "Image Tag"
+#         value: ${{ jobs.build-image.outputs.image_tag }}
+#       ecr_repo_var:
+#         description: "ECR Repository Name"
+#         value: ${{ jobs.build-image.outputs.ecr_repo_var }}
+
+# jobs:
+#   dockerize:
+#     runs-on: ubuntu-latest
+#     outputs:
+#       ecr_registry: ${{ steps.login-ecr.outputs.registry }}
+#       image_tag: ${{ steps.commit.outputs.short }}
+#       ecr_repo_var: ${{ inputs.ecr_repo_var }}
+
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+
+#       - name: Download Artifact from S3
+#         env:
+#           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           AWS_REGION: ${{ secrets.AWS_REGION }}  # Use the secret for AWS region
+#         run: |
+#           aws s3 cp s3://springboot-task-artifact/artifacts/hello-world-1.0-SNAPSHOT.jar ./target/hello-world-1.0-SNAPSHOT.jar
+
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v2
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: ${{ secrets.AWS_REGION }}  # Use the secret for AWS region
+
+#       - name: Log in to Amazon ECR
+#         id: login-ecr
+#         uses: aws-actions/amazon-ecr-login@v1
+
+#       - name: Test Docker permissions
+#         run: |
+#           docker --version
+#           docker ps
+#       - name: Build, tag, and push image to Amazon ECR
+#         env:
+#           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+#           IMAGE_TAG: ${{ steps.commit.outputs.short }}  # Use short SHA for image tag
+#         run: |
+#           echo "Registry set to env is: $ECR_REGISTRY"
+#           echo "Image tag set to env is: $IMAGE_TAG"
+#           echo "Repository set to env is: $ECR_REPOSITORY"
+
+#       - name: Build and Push Docker image
+#         # run: |
+#         #   docker build -t springboot-app/springboot-cicd:latest .
+#         #   docker tag springboot-app/springboot-cicd:latest 567790055067.dkr.ecr.us-east-1.amazonaws.com/nodejs-poc:latest
+#         #   docker push 567790055067.dkr.ecr.us-east-1.amazonaws.com/nodejs-poc:latest
+
+#         # run: |
+#         #   docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f Dockerfile .
+#         #   docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+#         run: |
+#           docker build -t springboot-app/springboot-cicd:latest .
+#           docker tag springboot-app/springboot-cicd:latest $ECR_REGISTRY/${{ inputs.ecr_repo_var }}:$IMAGE_TAG
+#           docker push $ECR_REGISTRY/${{ inputs.ecr_repo_var }}:$IMAGE_TAG
+
+
+
+
+
+
 name: Dockerize and Push to ECR
 
 on:
@@ -16,13 +106,13 @@ on:
     outputs: 
       ecr_registry:
         description: "ECR Registry URL"
-        value: ${{ jobs.build-image.outputs.ecr_registry }}
+        value: ${{ jobs.dockerize.outputs.ecr_registry }}
       image_tag:
         description: "Image Tag"
-        value: ${{ jobs.build-image.outputs.image_tag }}
+        value: ${{ jobs.dockerize.outputs.image_tag }}
       ecr_repo_var:
         description: "ECR Repository Name"
-        value: ${{ jobs.build-image.outputs.ecr_repo_var }}
+        value: ${{ jobs.dockerize.outputs.ecr_repo_var }}
 
 jobs:
   dockerize:
@@ -36,11 +126,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Get short SHA for image tag
+        id: commit
+        run: echo "short=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
       - name: Download Artifact from S3
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}  # Use the secret for AWS region
+          AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
           aws s3 cp s3://springboot-task-artifact/artifacts/hello-world-1.0-SNAPSHOT.jar ./target/hello-world-1.0-SNAPSHOT.jar
 
@@ -49,36 +143,25 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}  # Use the secret for AWS region
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Log in to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Test Docker permissions
+      - name: Define ECR Environment Variables
         run: |
-          docker --version
-          docker ps
-      - name: Build, tag, and push image to Amazon ECR
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ steps.commit.outputs.short }}  # Use short SHA for image tag
+          echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
+          echo "ECR_REPOSITORY=${{ inputs.ecr_repo_var }}" >> $GITHUB_ENV
+          echo "IMAGE_TAG=$short" >> $GITHUB_ENV
+
+      - name: Verify Environment Variables
         run: |
-          echo "Registry set to env is: $ECR_REGISTRY"
-          echo "Image tag set to env is: $IMAGE_TAG"
-          echo "Repository set to env is: $ECR_REPOSITORY"
+          echo "ECR_REGISTRY=${ECR_REGISTRY}"
+          echo "ECR_REPOSITORY=${ECR_REPOSITORY}"
+          echo "IMAGE_TAG=${IMAGE_TAG}"
 
       - name: Build and Push Docker image
-        # run: |
-        #   docker build -t springboot-app/springboot-cicd:latest .
-        #   docker tag springboot-app/springboot-cicd:latest 567790055067.dkr.ecr.us-east-1.amazonaws.com/nodejs-poc:latest
-        #   docker push 567790055067.dkr.ecr.us-east-1.amazonaws.com/nodejs-poc:latest
-
-        # run: |
-        #   docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f Dockerfile .
-        #   docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-
         run: |
-          docker build -t springboot-app/springboot-cicd:latest .
-          docker tag springboot-app/springboot-cicd:latest $ECR_REGISTRY/${{ inputs.ecr_repo_var }}:$IMAGE_TAG
-          docker push $ECR_REGISTRY/${{ inputs.ecr_repo_var }}:$IMAGE_TAG
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
