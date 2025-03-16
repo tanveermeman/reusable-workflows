@@ -63,6 +63,8 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ steps.commit.outputs.short }}  # Use short SHA for image tag
+        run: |
+          echo "Registry set to env is: $ECR_REGISTRY"
 
       - name: Build and Push Docker image
         # run: |
