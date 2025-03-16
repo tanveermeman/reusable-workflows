@@ -1,10 +1,7 @@
 name: Dockerize and Push to ECR
 
 on:
-  workflow_run:
-    workflows: ["Build Reusable Workflow"]
-    types:
-      - completed
+  workflow_call:
     secrets:
       AWS_ACCESS_KEY_ID:
         required: true
